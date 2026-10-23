@@ -1,3 +1,9 @@
+/// Opinionated, configurable Flutter lint rules via custom_lint.
+///
+/// Add `kx_lints` to your `dev_dependencies` and enable the `custom_lint`
+/// analyzer plugin to activate the rules.
+library kx_lints;
+
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 import 'src/callback_present_tense.dart';
@@ -14,6 +20,9 @@ import 'src/one_widget_per_file.dart';
 import 'src/prefer_geometry_types.dart';
 import 'src/screen_class_suffix.dart';
 
+/// Entry point for the custom_lint plugin.
+///
+/// Returns the plugin instance that registers all kx_lints rules.
 PluginBase createPlugin() => _KxLintsPlugin();
 
 class _KxLintsPlugin extends PluginBase {
