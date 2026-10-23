@@ -1,7 +1,6 @@
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 import 'src/callback_present_tense.dart';
-import 'src/cubit_only.dart';
 import 'src/file_length.dart';
 import 'src/late_controllers_not_final.dart';
 import 'src/no_color_scheme_access.dart';
@@ -24,7 +23,6 @@ class _KxLintsPlugin extends PluginBase {
     OneWidgetPerFile(),
     ScreenClassSuffix(),
     CallbackPresentTense(),
-    CubitOnly(),
     NoThemeOf(),
     NoTextThemeAccess(),
     NoColorSchemeAccess(),
