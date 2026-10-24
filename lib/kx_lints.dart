@@ -27,19 +27,24 @@ PluginBase createPlugin() => _KxLintsPlugin();
 
 class _KxLintsPlugin extends PluginBase {
   @override
-  List<LintRule> getLintRules(CustomLintConfigs configs) => [
-    FileLength(),
-    OneWidgetPerFile(),
-    ScreenClassSuffix(),
-    CallbackPresentTense(),
-    NoThemeOf(),
-    NoTextThemeAccess(),
-    NoColorSchemeAccess(),
-    NoMaterialColorsConstant(),
-    NoRawAlphaInteger(),
-    LateControllersNotFinal(),
-    PreferGeometryTypes(),
-    NoMagicNumbers(),
-    NoHardcodedStrings(),
-  ];
+  List<LintRule> getLintRules(CustomLintConfigs configs) {
+    final fileLengthOpts = configs.rules['file_length'];
+    final maxLines = fileLengthOpts?.json['max_lines'] as int?;
+
+    return [
+      FileLength(maxLines: maxLines ?? 400),
+      OneWidgetPerFile(),
+      ScreenClassSuffix(),
+      CallbackPresentTense(),
+      NoThemeOf(),
+      NoTextThemeAccess(),
+      NoColorSchemeAccess(),
+      NoMaterialColorsConstant(),
+      NoRawAlphaInteger(),
+      LateControllersNotFinal(),
+      PreferGeometryTypes(),
+      NoMagicNumbers(),
+      NoHardcodedStrings(),
+    ];
+  }
 }

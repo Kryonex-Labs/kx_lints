@@ -51,12 +51,23 @@ class NoHardcodedStrings extends DartLintRule {
     'fonts/',
   ];
 
+  static const _testDirSegments = [
+    '/test/',
+    '/integration_test/',
+    '/patrol_test/',
+  ];
+
   @override
   void run(
     CustomLintResolver resolver,
     ErrorReporter reporter,
     CustomLintContext context,
   ) {
+    final path = resolver.path;
+    for (final seg in _testDirSegments) {
+      if (path.contains(seg)) return;
+    }
+
     context.registry.addSimpleStringLiteral((node) {
       if (_isExcludedByContent(node.value)) return;
       if (!_isUserVisibleContext(node)) return;

@@ -15,6 +15,16 @@ class LateControllersNotFinal extends DartLintRule {
     errorSeverity: ErrorSeverity.WARNING,
   );
 
+  static bool _isPrivateWithoutDidUpdateWidget(
+    String fieldName,
+    ClassDeclaration cls,
+  ) {
+    if (!fieldName.startsWith('_')) return false;
+    return !cls.members.any(
+      (m) => m is MethodDeclaration && m.name.lexeme == 'didUpdateWidget',
+    );
+  }
+
   static const _controllerTypes = {
     'AnimationController',
     'ScrollController',
@@ -40,6 +50,9 @@ class LateControllersNotFinal extends DartLintRule {
       final typeName = node.fields.type?.toSource().trim();
       if (typeName == null || !_controllerTypes.contains(typeName)) return;
       for (final v in node.fields.variables) {
+        if (_isPrivateWithoutDidUpdateWidget(v.name.lexeme, enclosingClass)) {
+          return;
+        }
         reporter.atToken(v.name, _code, arguments: [typeName]);
       }
     });

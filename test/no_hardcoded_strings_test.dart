@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:kx_lints/src/no_hardcoded_strings.dart';
 import 'package:test/test.dart';
 
@@ -8,7 +10,7 @@ void main() {
     test('flags Text(...) literals and UI-named string arguments', () async {
       final errors = await runLintOn(
         NoHardcodedStrings(),
-        fixture('no_hardcoded_strings.dart'),
+        File('example/no_hardcoded_strings_fixture.dart').absolute,
       );
       expect(errors, hasLength(2));
       expect(
@@ -23,6 +25,14 @@ void main() {
       final errors = await runLintOn(
         NoHardcodedStrings(),
         fixture('no_hardcoded_strings_clean.dart'),
+      );
+      expect(errors, isEmpty);
+    });
+
+    test('skips files in test directories', () async {
+      final errors = await runLintOn(
+        NoHardcodedStrings(),
+        fixture('no_hardcoded_strings.dart'),
       );
       expect(errors, isEmpty);
     });

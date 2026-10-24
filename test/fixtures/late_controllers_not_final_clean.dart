@@ -1,3 +1,4 @@
+// ignore_for_file: unused_field
 // Fixture for late_controllers_not_final: non-matching late/final/type/class
 // combinations are not flagged.
 
@@ -13,4 +14,9 @@ class HomeState extends State {
 class PlainHolder {
   late final TextEditingController
   controller; // not flagged: not a State subclass
+}
+
+class ShimmerState extends State {
+  late final TextEditingController
+  _controller; // not flagged: private + no didUpdateWidget
 }
