@@ -1,3 +1,13 @@
+## 0.1.0
+
+- Add `cubit_only` rule: flag `extends Bloc<…>` and mandate `Cubit<…>`.
+- Add `no_cupertino_import` rule: block `package:flutter/cupertino.dart`.
+- Add `no_f_prefix_on_project_widgets` rule: reserve the `F` prefix for upstream forui widgets.
+- Add `no_material_widgets` rule: flag Material widgets with forui-generic default replacements; configurable via `replacements` (project entries merge on top of defaults). Matching is scoped to the real `package:flutter/material` library (via element resolution), so a project's own same-named widget is not flagged; a configured empty replacement value opts that entry out (disabling a default).
+- Add `route_constants_only` rule: flag string-literal navigation arguments; configurable via `method_name`, `constants_class`, and `argument_index` (out-of-range or negative indices are ignored).
+- Add `widgets_via_barrel_import` rule: force widget imports through a barrel; configurable via required `barrel_uri` (no-op when unset or blank) and optional `widgets_prefix` (an empty/blank prefix is treated as unset).
+- Parse per-rule config defensively: a wrong-typed option value (e.g. `argument_index: "1"`) falls back to the default instead of crashing the whole plugin.
+
 ## 0.0.3
 
 - Wire `CustomLintConfigs` per-rule options to constructors; `file_length` now reads `max_lines` from config. ([#1](https://github.com/Kryonex-Labs/kx_lints/issues/1))
