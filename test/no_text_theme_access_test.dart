@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoTextThemeAccess();
+  final rule = NoTextThemeAccess();
 
   group('no_text_theme_access violations', () {
     test(

@@ -1,14 +1,20 @@
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoMaterialWidgets extends DartLintRule {
+class NoMaterialWidgets extends AnalysisRule {
   NoMaterialWidgets({Map<String, String>? replacements})
       : replacements = {..._defaultReplacements, ...?replacements}
           // An explicit empty replacement value is an opt-out: it disables that
           // entry (including a default) rather than suggesting 'use null/empty'.
           ..removeWhere((_, value) => value.isEmpty),
-        super(code: _code);
+        super(
+          name: 'no_material_widgets',
+          description: 'Use forui or project widgets instead of Material ones.',
+        );
 
   /// Forui-generic defaults. Project config entries merge on top of these,
   /// with project overrides winning on key collisions.
@@ -30,40 +36,50 @@ class NoMaterialWidgets extends DartLintRule {
 
   final Map<String, String> replacements;
 
-  static const _code = LintCode(
-    name: 'no_material_widgets',
-    problemMessage: "Don't use the Material '{0}' widget; use '{1}' instead.",
+  static const LintCode code = LintCode(
+    'no_material_widgets',
+    "Don't use the Material '{0}' widget; use '{1}' instead.",
     correctionMessage: "Replace with the forui or project equivalent.",
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addInstanceCreationExpression((node) {
-      final typeName = node.constructorName.type.name2.lexeme;
-      final replacement = replacements[typeName];
-      if (replacement == null) return;
+    registry.addInstanceCreationExpression(this, _Visitor(this));
+  }
+}
 
-      // Name-only matching would flag a project's own `Card`/`Chip`/etc. Only
-      // flag when the constructor resolves to a Flutter material widget. If the
-      // element can't be resolved, fail open (don't flag).
-      final library = node.constructorName.type.element?.library;
-      final uri = library?.uri.toString();
-      if (uri == null) return;
-      if (uri != 'package:flutter/material.dart' &&
-          !uri.startsWith('package:flutter/src/material/')) {
-        return;
-      }
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
 
-      reporter.atNode(
-        node.constructorName,
-        _code,
-        arguments: [typeName, replacement],
-      );
-    });
+  final NoMaterialWidgets rule;
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    final typeName = node.constructorName.type.name.lexeme;
+    final replacement = rule.replacements[typeName];
+    if (replacement == null) return;
+
+    // Name-only matching would flag a project's own `Card`/`Chip`/etc. Only
+    // flag when the constructor resolves to a Flutter material widget. If the
+    // element can't be resolved, fail open (don't flag).
+    final library = node.constructorName.type.element?.library;
+    final uri = library?.uri.toString();
+    if (uri == null) return;
+    if (uri != 'package:flutter/material.dart' &&
+        !uri.startsWith('package:flutter/src/material/')) {
+      return;
+    }
+
+    rule.reportAtNode(
+      node.constructorName,
+      arguments: [typeName, replacement],
+    );
   }
 }

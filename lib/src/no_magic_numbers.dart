@@ -1,17 +1,42 @@
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoMagicNumbers extends DartLintRule {
-  NoMagicNumbers() : super(code: _code);
+class NoMagicNumbers extends AnalysisRule {
+  NoMagicNumbers()
+    : super(
+        name: 'no_magic_numbers',
+        description:
+            'Avoid magic numbers in widget build methods. '
+            'Extract to a named constant.',
+      );
 
-  static const _code = LintCode(
-    name: 'no_magic_numbers',
-    problemMessage:
-        'Avoid magic numbers in widget build methods. '
+  static const code = LintCode(
+    'no_magic_numbers',
+    'Avoid magic numbers in widget build methods. '
         'Extract to a named constant.',
     correctionMessage: 'Define a constant for this value.',
   );
+
+  @override
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
+  ) {
+    registry.addMethodDeclaration(this, _Visitor(this));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final AnalysisRule rule;
 
   static const _allowedInts = {0, 1, 2, -1};
   static final _allowedDoubles = {0.0, 1.0, 0.5};
@@ -49,25 +74,19 @@ class NoMagicNumbers extends DartLintRule {
   };
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
-  ) {
-    context.registry.addMethodDeclaration((node) {
-      if (node.name.lexeme != 'build') return;
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (node.name.lexeme != 'build') return;
 
-      final body = node.body;
-      for (final literal in _numericLiterals(body)) {
-        final value = literal.value;
-        if (value == null) continue;
-        if (value is int && _allowedInts.contains(value)) continue;
-        if (value is double && _allowedDoubles.contains(value)) continue;
-        if (!_isInSizingContext(literal)) continue;
+    final body = node.body;
+    for (final literal in _numericLiterals(body)) {
+      final value = literal.value;
+      if (value == null) continue;
+      if (value is int && _allowedInts.contains(value)) continue;
+      if (value is double && _allowedDoubles.contains(value)) continue;
+      if (!_isInSizingContext(literal)) continue;
 
-        reporter.atNode(literal, _code);
-      }
-    });
+      rule.reportAtNode(literal);
+    }
   }
 
   Iterable<Literal> _numericLiterals(AstNode node) sync* {
@@ -84,8 +103,8 @@ class NoMagicNumbers extends DartLintRule {
   bool _isInSizingContext(Literal node) {
     AstNode? current = node.parent;
     while (current != null) {
-      if (current is NamedExpression) {
-        final name = current.name.label.name;
+      if (current is NamedArgument) {
+        final name = current.name.lexeme;
         if (_sizingParams.contains(name)) return true;
         return false;
       }

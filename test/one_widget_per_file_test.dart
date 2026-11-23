@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = OneWidgetPerFile();
+  final rule = OneWidgetPerFile();
 
   group('one_widget_per_file violations', () {
     test('flags every widget class after the first', () async {

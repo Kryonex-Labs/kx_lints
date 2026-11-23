@@ -1,11 +1,18 @@
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class WidgetsViaBarrelImport extends DartLintRule {
+class WidgetsViaBarrelImport extends AnalysisRule {
   WidgetsViaBarrelImport({this.barrelUri, String? widgetsPrefix})
-      : widgetsPrefix = widgetsPrefix ?? _derivePrefix(barrelUri),
-        super(code: _code);
+    : widgetsPrefix = widgetsPrefix ?? _derivePrefix(barrelUri),
+      super(
+        name: 'widgets_via_barrel_import',
+        description:
+            "Import core widgets through the barrel, not individual files.",
+      );
 
   /// The barrel URI widgets must be imported through. When unset the rule is a
   /// complete no-op.
@@ -22,19 +29,20 @@ class WidgetsViaBarrelImport extends DartLintRule {
     return barrelUri.substring(0, lastSlash + 1);
   }
 
-  static const _code = LintCode(
-    name: 'widgets_via_barrel_import',
-    problemMessage:
-        "Import core widgets through the barrel '{0}', not individual files.",
+  static const LintCode code = LintCode(
+    'widgets_via_barrel_import',
+    "Import core widgets through the barrel '{0}', not individual files.",
     correctionMessage: "Replace with 'import {0};'.",
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
     final barrel = barrelUri;
     final prefix = widgetsPrefix;
@@ -48,14 +56,29 @@ class WidgetsViaBarrelImport extends DartLintRule {
       return;
     }
 
-    context.registry.addImportDirective((node) {
-      final uri = node.uri.stringValue ?? '';
-      if (uri.startsWith(prefix) && uri != barrel) {
-        // Files inside the widgets directory may use relative imports — skip.
-        final source = resolver.source.uri.toString();
-        if (source.startsWith(prefix)) return;
-        reporter.atNode(node.uri, _code, arguments: [barrel]);
-      }
-    });
+    registry.addImportDirective(this, _Visitor(this, barrel, prefix));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  final AnalysisRule rule;
+  final String barrel;
+  final String prefix;
+
+  _Visitor(this.rule, this.barrel, this.prefix);
+
+  @override
+  void visitImportDirective(ImportDirective node) {
+    final uri = node.uri.stringValue ?? '';
+    if (uri.startsWith(prefix) && uri != barrel) {
+      // Files inside the widgets directory may use relative imports — skip.
+      final source =
+          node.root is CompilationUnit
+              ? (node.root as CompilationUnit).declaredFragment?.source.uri
+                    .toString()
+              : null;
+      if (source != null && source.startsWith(prefix)) return;
+      rule.reportAtNode(node.uri, arguments: [barrel]);
+    }
   }
 }

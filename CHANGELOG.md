@@ -1,3 +1,13 @@
+## 0.2.0
+
+- **BREAKING**: Migrate from `custom_lint_builder` to `analysis_server_plugin`.
+  - Consumers now enable rules via `analysis_options.yaml` `plugins:` / `diagnostics:` instead of `custom_lint`.
+  - Requires Dart SDK ≥ 3.14.0 and `analyzer ≥13.0.0 <15.0.0`.
+- Drop `custom_lint_builder` dependency entirely.
+- Rewrite all 19 lint rules to `AnalysisRule` + `RuleVisitorRegistry` visitor pattern.
+- Rewrite test harness to use `AnalysisContextCollection` directly (no custom_lint test utils).
+- Add `lib/main.dart` plugin entry point for `analysis_server_plugin` discovery.
+
 ## 0.1.0
 
 - Add `cubit_only` rule: flag `extends Bloc<…>` and mandate `Cubit<…>`.

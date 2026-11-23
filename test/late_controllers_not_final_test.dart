@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = LateControllersNotFinal();
+  final rule = LateControllersNotFinal();
 
   group('late_controllers_not_final violations', () {
     test('flags late final controllers in a State subclass', () async {

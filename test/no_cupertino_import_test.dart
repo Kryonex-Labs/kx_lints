@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoCupertinoImport();
+  final rule = NoCupertinoImport();
 
   group('no_cupertino_import violations', () {
     test('flags importing package:flutter/cupertino.dart', () async {

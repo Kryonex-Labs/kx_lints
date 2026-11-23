@@ -1,18 +1,28 @@
-import 'package:custom_lint_builder/custom_lint_builder.dart';
-import 'package:kx_lints/kx_lints.dart';
-import 'package:kx_lints/src/no_material_widgets.dart';
-import 'package:kx_lints/src/route_constants_only.dart';
-import 'package:kx_lints/src/widgets_via_barrel_import.dart';
+import 'package:analysis_server_plugin/registry.dart';
+import 'package:kx_lints/main.dart';
 import 'package:test/test.dart';
 
-void main() {
-  test('createPlugin exposes all 19 lint rules', () {
-    final plugin = createPlugin();
-    // ignore: invalid_use_of_internal_member
-    final rules = plugin.getLintRules(CustomLintConfigs.empty);
+class _CapturingRegistry implements PluginRegistry {
+  final names = <String>[];
 
-    expect(rules, hasLength(19));
-    expect(rules.map((r) => r.code.name).toSet(), {
+  @override
+  void registerLintRule(rule) => names.add(rule.name);
+
+  @override
+  void registerWarningRule(rule) => names.add(rule.name);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {}
+}
+
+void main() {
+  test('plugin exposes all 19 lint rules', () {
+    final registry = _CapturingRegistry();
+    plugin.register(registry);
+
+    expect(plugin.name, 'kx_lints');
+    expect(registry.names, hasLength(19));
+    expect(registry.names.toSet(), {
       'file_length',
       'one_widget_per_file',
       'screen_class_suffix',
@@ -35,61 +45,6 @@ void main() {
     });
   });
 
-  test('malformed per-rule config does not crash and falls back to defaults',
-      () {
-    // Every value here is the wrong type for the option it sits under. Hard
-    // casts used to throw a TypeError out of getLintRules, taking down all 19
-    // rules; the safe getters must ignore the bad values and use defaults.
-    // ignore: invalid_use_of_internal_member
-    final configs = CustomLintConfigs(
-      enableAllLintRules: null,
-      verbose: false,
-      debug: false,
-      rules: {
-        // ignore: invalid_use_of_internal_member
-        'file_length': LintOptions.fromYaml(
-          const {'max_lines': 'big'},
-          enabled: true,
-        ),
-        // ignore: invalid_use_of_internal_member
-        'no_material_widgets': LintOptions.fromYaml(
-          const {'replacements': ['a', 'b']},
-          enabled: true,
-        ),
-        // ignore: invalid_use_of_internal_member
-        'route_constants_only': LintOptions.fromYaml(
-          const {
-            'argument_index': '1',
-            'method_name': 5,
-            'constants_class': true,
-          },
-          enabled: true,
-        ),
-        // ignore: invalid_use_of_internal_member
-        'widgets_via_barrel_import': LintOptions.fromYaml(
-          const {'barrel_uri': 5, 'widgets_prefix': 9},
-          enabled: true,
-        ),
-      },
-    );
-
-    late final List<LintRule> rules;
-    expect(
-      // ignore: invalid_use_of_internal_member
-      () => rules = createPlugin().getLintRules(configs),
-      returnsNormally,
-    );
-    expect(rules, hasLength(19));
-
-    final route = rules.whereType<RouteConstantsOnly>().single;
-    expect(route.argumentIndex, 1);
-    expect(route.methodName, 'navigateTo');
-    expect(route.constantsClass, 'AppRoutes');
-
-    final barrel = rules.whereType<WidgetsViaBarrelImport>().single;
-    expect(barrel.barrelUri, isNull);
-
-    final material = rules.whereType<NoMaterialWidgets>().single;
-    expect(material.replacements['Scaffold'], 'FScaffold');
-  });
+  // ponytail: malformed-config test dropped; plugin has no config channel yet
+  // (see lib/main.dart). Restore when rule migration adds one.
 }

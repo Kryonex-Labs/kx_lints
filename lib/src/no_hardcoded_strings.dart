@@ -1,17 +1,26 @@
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoHardcodedStrings extends DartLintRule {
-  NoHardcodedStrings() : super(code: _code);
+class NoHardcodedStrings extends AnalysisRule {
+  NoHardcodedStrings()
+    : super(
+        name: 'no_hardcoded_strings',
+        description: 'Avoid hardcoded user-visible strings.',
+      );
 
-  static const _code = LintCode(
-    name: 'no_hardcoded_strings',
-    problemMessage:
-        'Avoid hardcoded user-visible strings. '
+  static const code = LintCode(
+    'no_hardcoded_strings',
+    'Avoid hardcoded user-visible strings. '
         'Use localized strings via AppLocalizations or equivalent.',
     correctionMessage: 'Replace with a localized string accessor.',
   );
+
+  @override
+  DiagnosticCode get diagnosticCode => code;
 
   static const _uiParams = {
     'label',
@@ -58,27 +67,35 @@ class NoHardcodedStrings extends DartLintRule {
   ];
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    final path = resolver.path;
+    final path = context.definingUnit.file.path;
     for (final seg in _testDirSegments) {
       if (path.contains(seg)) return;
     }
 
-    context.registry.addSimpleStringLiteral((node) {
-      if (_isExcludedByContent(node.value)) return;
-      if (!_isUserVisibleContext(node)) return;
+    registry.addSimpleStringLiteral(this, _Visitor(this));
+  }
+}
 
-      reporter.atNode(node, _code);
-    });
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final NoHardcodedStrings rule;
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    if (_isExcludedByContent(node.value)) return;
+    if (!_isUserVisibleContext(node)) return;
+
+    rule.reportAtNode(node);
   }
 
   bool _isExcludedByContent(String value) {
     if (value.trim().isEmpty) return true;
-    for (final prefix in _excludedPrefixes) {
+    for (final prefix in NoHardcodedStrings._excludedPrefixes) {
       if (value.startsWith(prefix)) return true;
     }
     return false;
@@ -91,16 +108,16 @@ class NoHardcodedStrings extends DartLintRule {
     if (parent is ArgumentList) {
       final grandparent = parent.parent;
       if (grandparent is InstanceCreationExpression) {
-        final name = grandparent.constructorName.type.name2.lexeme;
+        final name = grandparent.constructorName.type.name.lexeme;
         if (name == 'Text') return true;
       }
     }
 
     // Named parameter check
-    if (parent is NamedExpression) {
-      final paramName = parent.name.label.name;
-      if (_excludedParams.contains(paramName)) return false;
-      if (_uiParams.contains(paramName)) return true;
+    if (parent is NamedArgument) {
+      final paramName = parent.name.lexeme;
+      if (NoHardcodedStrings._excludedParams.contains(paramName)) return false;
+      if (NoHardcodedStrings._uiParams.contains(paramName)) return true;
     }
 
     return false;

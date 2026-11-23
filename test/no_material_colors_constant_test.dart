@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoMaterialColorsConstant();
+  final rule = NoMaterialColorsConstant();
 
   group('no_material_colors_constant violations', () {
     test('flags Colors.X', () async {

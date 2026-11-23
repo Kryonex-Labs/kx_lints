@@ -1,31 +1,47 @@
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoThemeOf extends DartLintRule {
-  const NoThemeOf() : super(code: _code);
+class NoThemeOf extends AnalysisRule {
+  NoThemeOf()
+      : super(
+          name: 'no_theme_of',
+          description: "Don't use 'Theme.of(context)'; use 'context.theme'.",
+        );
 
-  static const _code = LintCode(
-    name: 'no_theme_of',
-    problemMessage:
-        "Don't use 'Theme.of(context)'; use 'context.theme' instead.",
+  static const LintCode code = LintCode(
+    'no_theme_of',
+    "Don't use 'Theme.of(context)'; use 'context.theme' instead.",
     correctionMessage: "Replace with 'context.theme'.",
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addMethodInvocation((node) {
-      if (node.methodName.name != 'of') return;
-      final target = node.target;
-      if (target is SimpleIdentifier && target.name == 'Theme') {
-        reporter.atNode(node, _code);
-      }
-    });
+    registry.addMethodInvocation(this, _Visitor(this));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final AnalysisRule rule;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name != 'of') return;
+    final target = node.target;
+    if (target is SimpleIdentifier && target.name == 'Theme') {
+      rule.reportAtNode(node);
+    }
   }
 }

@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = PreferGeometryTypes();
+  final rule = PreferGeometryTypes();
 
   group('prefer_geometry_types violations', () {
     test('flags concrete geometry types on widget fields and formal '

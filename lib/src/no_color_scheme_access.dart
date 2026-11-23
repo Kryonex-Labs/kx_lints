@@ -1,34 +1,55 @@
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoColorSchemeAccess extends DartLintRule {
-  const NoColorSchemeAccess() : super(code: _code);
-
-  static const _code = LintCode(
-    name: 'no_color_scheme_access',
-    problemMessage:
-        "Don't access '.colorScheme'; use 'context.theme.colors' instead.",
+class NoColorSchemeAccess extends AnalysisRule {
+  static const LintCode code = LintCode(
+    'no_color_scheme_access',
+    "Don't access '.colorScheme'; use 'context.theme.colors' instead.",
     correctionMessage:
         "Replace 'theme.colorScheme.X' with 'context.theme.colors.X'.",
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
 
+  NoColorSchemeAccess()
+      : super(
+          name: 'no_color_scheme_access',
+          description: "Don't access '.colorScheme'; use 'context.theme.colors'.",
+        );
+
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addPropertyAccess((node) {
-      if (node.propertyName.name == 'colorScheme') {
-        reporter.atNode(node.propertyName, _code);
-      }
-    });
-    context.registry.addPrefixedIdentifier((node) {
-      if (node.identifier.name == 'colorScheme') {
-        reporter.atNode(node.identifier, _code);
-      }
-    });
+    final visitor = _Visitor(this);
+    registry.addPropertyAccess(this, visitor);
+    registry.addPrefixedIdentifier(this, visitor);
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final AnalysisRule rule;
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    if (node.propertyName.name == 'colorScheme') {
+      rule.reportAtNode(node.propertyName);
+    }
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    if (node.identifier.name == 'colorScheme') {
+      rule.reportAtNode(node.identifier);
+    }
   }
 }

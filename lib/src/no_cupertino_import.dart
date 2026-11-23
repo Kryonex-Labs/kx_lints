@@ -1,28 +1,46 @@
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class NoCupertinoImport extends DartLintRule {
-  const NoCupertinoImport() : super(code: _code);
+class NoCupertinoImport extends AnalysisRule {
+  NoCupertinoImport()
+    : super(
+        name: 'no_cupertino_import',
+        description:
+            "Don't import 'package:flutter/cupertino.dart'; use forui components instead.",
+      );
 
-  static const _code = LintCode(
-    name: 'no_cupertino_import',
-    problemMessage:
-        "Don't import 'package:flutter/cupertino.dart'; use forui components instead.",
+  static const LintCode code = LintCode(
+    'no_cupertino_import',
+    "Don't import 'package:flutter/cupertino.dart'; use forui components instead.",
     correctionMessage: "Remove this import and use the forui equivalents.",
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addImportDirective((node) {
-      if (node.uri.stringValue == 'package:flutter/cupertino.dart') {
-        reporter.atNode(node, _code);
-      }
-    });
+    registry.addImportDirective(this, _Visitor(this));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  final AnalysisRule rule;
+
+  _Visitor(this.rule);
+
+  @override
+  void visitImportDirective(ImportDirective node) {
+    if (node.uri.stringValue == 'package:flutter/cupertino.dart') {
+      rule.reportAtNode(node);
+    }
   }
 }

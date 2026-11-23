@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoColorSchemeAccess();
+  final rule =NoColorSchemeAccess();
 
   group('no_color_scheme_access violations', () {
     test(

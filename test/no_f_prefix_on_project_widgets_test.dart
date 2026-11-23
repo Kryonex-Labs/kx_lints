@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoFPrefixOnProjectWidgets();
+  final rule =NoFPrefixOnProjectWidgets();
 
   group('no_f_prefix_on_project_widgets violations', () {
     test('flags an F-prefixed widget class', () async {

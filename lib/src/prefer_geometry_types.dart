@@ -1,20 +1,29 @@
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class PreferGeometryTypes extends DartLintRule {
-  const PreferGeometryTypes() : super(code: _code);
+class PreferGeometryTypes extends AnalysisRule {
+  PreferGeometryTypes()
+    : super(
+        name: 'prefer_geometry_types',
+        description:
+            'Prefer abstract geometry types on widget API surface for RTL.',
+      );
 
-  static const _code = LintCode(
-    name: 'prefer_geometry_types',
-    problemMessage:
-        "Use '{1}' instead of '{0}' on widget API surface "
+  static const LintCode code = LintCode(
+    'prefer_geometry_types',
+    "Use '{1}' instead of '{0}' on widget API surface "
         'to support RTL layouts.',
     correctionMessage:
         'Replace the concrete type with its abstract geometry counterpart.',
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
+
+  @override
+  DiagnosticCode get diagnosticCode => code;
 
   static const _concreteToGeometry = <String, String>{
     'EdgeInsets': 'EdgeInsetsGeometry',
@@ -35,47 +44,64 @@ class PreferGeometryTypes extends DartLintRule {
   };
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addFieldDeclaration((node) {
-      final enclosingClass = node.parent;
-      if (enclosingClass is! ClassDeclaration) return;
-      if (!_isWidgetClass(enclosingClass)) return;
-      final typeAnnotation = node.fields.type;
-      if (typeAnnotation == null) return;
-      final typeName = typeAnnotation.toSource().trim();
-      final geometry = _concreteToGeometry[typeName];
-      if (geometry == null) return;
-      reporter.atNode(typeAnnotation, _code, arguments: [typeName, geometry]);
-    });
-
-    context.registry.addSimpleFormalParameter((node) {
-      final typeAnnotation = node.type;
-      if (typeAnnotation == null) return;
-      final typeName = typeAnnotation.toSource().trim();
-      final geometry = _concreteToGeometry[typeName];
-      if (geometry == null) return;
-      final enclosingClass = _enclosingClass(node);
-      if (enclosingClass == null || !_isWidgetClass(enclosingClass)) return;
-      reporter.atNode(typeAnnotation, _code, arguments: [typeName, geometry]);
-    });
+    registry.addFieldDeclaration(this, _FieldVisitor(this));
+    registry.addRegularFormalParameter(this, _ParamVisitor(this));
   }
 
-  bool _isWidgetClass(ClassDeclaration cls) {
-    final superclassName = cls.extendsClause?.superclass.name2.lexeme;
+  static bool _isWidgetClass(ClassDeclaration cls) {
+    final superclassName = cls.extendsClause?.superclass.name.lexeme;
     return superclassName != null &&
         _widgetSuperclasses.contains(superclassName);
   }
 
-  ClassDeclaration? _enclosingClass(AstNode node) {
+  static ClassDeclaration? _enclosingClass(AstNode node) {
     AstNode? current = node.parent;
     while (current != null) {
       if (current is ClassDeclaration) return current;
       current = current.parent;
     }
     return null;
+  }
+}
+
+class _FieldVisitor extends SimpleAstVisitor<void> {
+  _FieldVisitor(this.rule);
+  final AnalysisRule rule;
+
+  @override
+  void visitFieldDeclaration(FieldDeclaration node) {
+    final enclosingClass = node.parent?.parent;
+    if (enclosingClass is! ClassDeclaration) return;
+    if (!PreferGeometryTypes._isWidgetClass(enclosingClass)) return;
+    final typeAnnotation = node.fields.type;
+    if (typeAnnotation == null) return;
+    final typeName = typeAnnotation.toSource().trim();
+    final geometry = PreferGeometryTypes._concreteToGeometry[typeName];
+    if (geometry == null) return;
+    rule.reportAtNode(typeAnnotation, arguments: [typeName, geometry]);
+  }
+}
+
+class _ParamVisitor extends SimpleAstVisitor<void> {
+  _ParamVisitor(this.rule);
+  final AnalysisRule rule;
+
+  @override
+  void visitRegularFormalParameter(RegularFormalParameter node) {
+    final typeAnnotation = node.type;
+    if (typeAnnotation == null) return;
+    final typeName = typeAnnotation.toSource().trim();
+    final geometry = PreferGeometryTypes._concreteToGeometry[typeName];
+    if (geometry == null) return;
+    final enclosingClass = PreferGeometryTypes._enclosingClass(node);
+    if (enclosingClass == null ||
+        !PreferGeometryTypes._isWidgetClass(enclosingClass)) {
+      return;
+    }
+    rule.reportAtNode(typeAnnotation, arguments: [typeName, geometry]);
   }
 }

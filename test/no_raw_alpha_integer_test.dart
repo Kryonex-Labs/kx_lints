@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = NoRawAlphaInteger();
+  final rule = NoRawAlphaInteger();
 
   group('no_raw_alpha_integer violations', () {
     test('flags alpha values greater than 1.0', () async {

@@ -1,9 +1,9 @@
 name: kx_lints
 description: >-
-  Opinionated Flutter lint rules that catch real bugs via custom_lint —
+  Opinionated Flutter lint rules via analysis_server_plugin —
   file length, widget structure, theme access, magic numbers, hardcoded
   strings, and more. Configurable per-rule thresholds, quick-fixes included.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/Kryonex-Labs/kx_lints
 issue_tracker: https://github.com/Kryonex-Labs/kx_lints/issues
 homepage: https://github.com/Kryonex-Labs/kx_lints
@@ -11,16 +11,16 @@ documentation: https://github.com/Kryonex-Labs/kx_lints
 topics:
   - lints
   - flutter
-  - custom-lint
+  - analysis-plugin
   - static-analysis
   - code-quality
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.14.0
 
 dependencies:
-  analyzer: ^8.0.0
-  custom_lint_builder: ^0.8.0
+  analysis_server_plugin: ^0.3.3
+  analyzer: ">=13.0.0 <15.0.0"
 
 dev_dependencies:
   test: ^1.25.0

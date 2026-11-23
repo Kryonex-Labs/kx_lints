@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = CallbackPresentTense();
+  final rule = CallbackPresentTense();
 
   group('callback_present_tense violations', () {
     test('flags past-tense callbacks declared as fields, simple formal '

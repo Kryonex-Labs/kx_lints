@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = ScreenClassSuffix();
+  final rule = ScreenClassSuffix();
 
   group('screen_class_suffix violations', () {
     test('flags widget classes ending in Page', () async {

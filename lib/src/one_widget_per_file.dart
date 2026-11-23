@@ -1,17 +1,26 @@
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class OneWidgetPerFile extends DartLintRule {
-  const OneWidgetPerFile() : super(code: _code);
+class OneWidgetPerFile extends AnalysisRule {
+  OneWidgetPerFile()
+      : super(
+          name: 'one_widget_per_file',
+          description: 'Only one widget class is allowed per file.',
+        );
 
-  static const _code = LintCode(
-    name: 'one_widget_per_file',
-    problemMessage: 'Only one widget class is allowed per file.',
+  static const LintCode code = LintCode(
+    'one_widget_per_file',
+    'Only one widget class is allowed per file.',
     correctionMessage: 'Move this widget to its own file.',
-    errorSeverity: ErrorSeverity.WARNING,
+    severity: DiagnosticSeverity.WARNING,
   );
+
+  @override
+  DiagnosticCode get diagnosticCode => code;
 
   static const _widgetSuperclasses = {
     'Widget',
@@ -26,35 +35,43 @@ class OneWidgetPerFile extends DartLintRule {
   };
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addCompilationUnit((node) {
-      final widgetClasses = <ClassDeclaration>[];
-      for (final declaration in node.declarations) {
-        if (declaration is ClassDeclaration &&
-            _isWidgetClass(declaration) &&
-            !_isStateSubclass(declaration)) {
-          widgetClasses.add(declaration);
-        }
+    registry.addCompilationUnit(this, _Visitor(this));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final OneWidgetPerFile rule;
+
+  @override
+  void visitCompilationUnit(CompilationUnit node) {
+    final widgetClasses = <ClassDeclaration>[];
+    for (final declaration in node.declarations) {
+      if (declaration is ClassDeclaration &&
+          _isWidgetClass(declaration) &&
+          !_isStateSubclass(declaration)) {
+        widgetClasses.add(declaration);
       }
-      for (final cls in widgetClasses.skip(1)) {
-        reporter.atToken(cls.name, _code);
-      }
-    });
+    }
+    for (final cls in widgetClasses.skip(1)) {
+      rule.reportAtToken(cls.namePart.typeName);
+    }
   }
 
   bool _isWidgetClass(ClassDeclaration cls) {
-    final superclassName = cls.extendsClause?.superclass.name2.lexeme;
+    final superclassName = cls.extendsClause?.superclass.name.lexeme;
     return superclassName != null &&
-        _widgetSuperclasses.contains(superclassName);
+        OneWidgetPerFile._widgetSuperclasses.contains(superclassName);
   }
 
   bool _isStateSubclass(ClassDeclaration cls) {
     final superclass = cls.extendsClause?.superclass;
     if (superclass == null) return false;
-    return superclass.name2.lexeme == 'State';
+    return superclass.name.lexeme == 'State';
   }
 }

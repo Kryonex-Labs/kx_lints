@@ -1,33 +1,51 @@
-import 'package:analyzer/error/error.dart' hide LintCode;
-import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer/analysis_rule/analysis_rule.dart';
+import 'package:analyzer/analysis_rule/rule_context.dart';
+import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/error/error.dart';
 
-class FileLength extends DartLintRule {
-  FileLength({this.maxLines = _defaultMaxLines}) : super(code: _code);
+class FileLength extends AnalysisRule {
+  FileLength({this.maxLines = _defaultMaxLines})
+    : super(
+        name: 'file_length',
+        description: 'File exceeds the line limit. Split it into smaller files.',
+      );
 
   static const _defaultMaxLines = 400;
 
   final int maxLines;
 
-  static const _code = LintCode(
-    name: 'file_length',
-    problemMessage: 'File exceeds the line limit. Split it into smaller files.',
+  static const LintCode code = LintCode(
+    'file_length',
+    'File exceeds the line limit. Split it into smaller files.',
     correctionMessage:
         'Extract widgets, helpers, or logic into separate files.',
-    errorSeverity: ErrorSeverity.ERROR,
+    severity: DiagnosticSeverity.ERROR,
   );
 
   @override
-  void run(
-    CustomLintResolver resolver,
-    ErrorReporter reporter,
-    CustomLintContext context,
+  DiagnosticCode get diagnosticCode => code;
+
+  @override
+  void registerNodeProcessors(
+    RuleVisitorRegistry registry,
+    RuleContext context,
   ) {
-    context.registry.addCompilationUnit((node) {
-      final lineCount = node.lineInfo.getLocation(node.end).lineNumber;
-      if (lineCount > maxLines) {
-        reporter.atOffset(offset: 0, length: 0, errorCode: _code);
-      }
-    });
+    registry.addCompilationUnit(this, _Visitor(this));
+  }
+}
+
+class _Visitor extends SimpleAstVisitor<void> {
+  _Visitor(this.rule);
+
+  final FileLength rule;
+
+  @override
+  void visitCompilationUnit(CompilationUnit node) {
+    final lineCount = node.lineInfo.getLocation(node.end).lineNumber;
+    if (lineCount > rule.maxLines) {
+      rule.reportAtOffset(0, 0);
+    }
   }
 }

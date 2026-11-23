@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'test_helper.dart';
 
 void main() {
-  const rule = CubitOnly();
+  final rule = CubitOnly();
 
   group('cubit_only violations', () {
     test('flags a class extending Bloc', () async {
